@@ -26,7 +26,7 @@ certoraRun  certora/harness/SplitsHarness.sol \
 --verify SplitsHarness:certora/specs/Splits.spec \
 --packages openzeppelin-contracts=lib/openzeppelin-contracts/contracts \
 --path . \
---solc solc8.15 \
+--solc solc8.17 \
 --loop_iter 2 \
 --optimistic_loop \
 --staging \

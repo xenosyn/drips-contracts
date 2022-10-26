@@ -45,8 +45,8 @@ methods {
     //getMaxDripsReceivers() returns (uint8) envfree
     //getAmtPerSec() returns (uint192) envfree
     getCycleSecs() returns (uint32) envfree
-    //_dripsState(uint256, uint256) envfree
-    
+    //dripsState(uint256, uint256) envfree
+
     // Summarizing external functions:
 
     // ./src/Drips.sol
@@ -157,7 +157,7 @@ methods {
             uint256 start,
             uint256 end
         ) returns (uint256 amt) => NONDET */
-    
+
 
 
 
@@ -207,7 +207,7 @@ methods {
         address to,
         uint256 amount
     ) returns (bool) => DISPATCHER(true);
-    
+
     transferFrom(
         address from,
         address to,
@@ -246,7 +246,7 @@ function getReserveContract() returns address {
  **************************************************/
 // Describe expressions over the system's variables
 // that should always hold.
-// Usually implemented via invariants 
+// Usually implemented via invariants
 
 /*
 // Validity of amount of receivers
@@ -297,7 +297,7 @@ invariant amtPerSecMustNeverBeZero()
  *                 RISK ANALYSIS                  *
  **************************************************/
 // Reasoning about the assets of the user\system and
-// from point of view of what should never happen 
+// from point of view of what should never happen
 
 
 
@@ -328,7 +328,7 @@ rule whoChangedBalanceOfUserId(method f, uint256 userId) {
     env eF;
 
     calldataarg args;
-    uint256 assetId;
+    address erc20;
 
 
     bytes32 dripsHashBefore;
@@ -341,7 +341,7 @@ rule whoChangedBalanceOfUserId(method f, uint256 userId) {
      dripsHistoryHashBefore,
      updateTimeBefore,
      balanceBefore,
-     maxEndBefore = _dripsState(eB, userId, assetId);
+     maxEndBefore = dripsState(eB, userId, erc20);
 
     f(eF,args);  // call any function
 
@@ -355,7 +355,7 @@ rule whoChangedBalanceOfUserId(method f, uint256 userId) {
      dripsHistoryHashAfter,
      updateTimeAfter,
      balanceAfter,
-     maxEndAfter = _dripsState(eF, userId, assetId);
+     maxEndAfter = dripsState(eF, userId, erc20);
 
 
     assert balanceBefore == balanceAfter, "balanceOfUser changed";
@@ -368,8 +368,8 @@ rule whoChangedBalanceOfToken(method f, address erc20)
     env e;
     calldataarg args;
 
-    bytes32 pausedSlotBefore = pausedSlot(e);  // eip1967.managed.paused
-    bytes32 _storageSlotBefore = _storageSlot(e);  // eip1967.dripsHub.storage
+    bytes32 pausedSlotBefore = pausedStorageSlot(e);  // eip1967.managed.paused
+    bytes32 _storageSlotBefore = dripsHubStorageSlot(e);  // eip1967.dripsHub.storage
 
     require pausedSlotBefore == 0x2d3dd64cfe36f9c22b4321979818bccfbeada88f68e06ff08869db50f24e4d58;
     require _storageSlotBefore == 0xe2eace0883e57721da7c6d5421826cf6852312431246618b5b53d0cb70e28a0a;
@@ -378,8 +378,8 @@ rule whoChangedBalanceOfToken(method f, address erc20)
 
     f(e,args);
 
-    bytes32 _storageSlotAfter = _storageSlot(e);
-    bytes32 pausedSlotAfter = pausedSlot(e);
+    bytes32 _storageSlotAfter = dripsHubStorageSlot(e);
+    bytes32 pausedSlotAfter = pausedStorageSlot(e);
 
     uint256 balanceAfter = totalBalance(e, erc20);
 
@@ -396,7 +396,7 @@ rule singleUserTimeUpdateNotChangingOtherUserBalance(method f, uint256 userId) {
     // uint8 i;
 
     // userId1 and userId2 - receivers Id
-    uint256 assetId; uint256 userId1; uint256 userId2;
+    address erc20; uint256 userId1; uint256 userId2;
     require userId != userId1; // != userId2;
     require userId1 < userId2; // sorted
     require userId != userId2;
@@ -406,16 +406,16 @@ rule singleUserTimeUpdateNotChangingOtherUserBalance(method f, uint256 userId) {
     uint32 updateTimeBefore; uint128 balanceBefore; uint32 maxEndBefore;
 
     dripsHashBefore, dripsHistoryHashBefore, updateTimeBefore,
-     balanceBefore, maxEndBefore = _dripsState(eB, userId2, assetId);
-    
+     balanceBefore, maxEndBefore = dripsState(eB, userId2, erc20);
+
     // assert false; // false 0
-    
+
     // step 2 - setup user1 changes and then call _updateReceiverStates()
     /*  //setting values to config by create:
         uint192 _amtPerSec;
         uint32 _start;
         uint32 _duration;
-    
+
 
     require _amtPerSec != 0;
     */
@@ -430,16 +430,16 @@ rule singleUserTimeUpdateNotChangingOtherUserBalance(method f, uint256 userId) {
     DH.DripsReceiver receiverOld1;
     require receiverOld1.userId == userId1;
     require receiverOld1.config == configOld1;
-    
+
     DH.DripsReceiver receiverOld2;
     require receiverOld2.userId == userId2;
     require receiverOld2.config == configOld2;
-    
+
     DH.DripsReceiver receiverNew1;
     require receiverNew1.userId == userId1;
     require receiverNew1.config == configNew1;
-    
-    
+
+
 
 
     // DripsReceiver[] memory currReceivers;
@@ -459,7 +459,7 @@ rule singleUserTimeUpdateNotChangingOtherUserBalance(method f, uint256 userId) {
     // uint32 currMaxEnd = state.maxEnd;
 
     // uint32 newMaxEnd = sizeof(uint32);
-    
+
 
     // assert false;  // false 1
      //assert configOld2 != configNew2;  //returned 0
@@ -469,7 +469,7 @@ rule singleUserTimeUpdateNotChangingOtherUserBalance(method f, uint256 userId) {
             receiverOld1,
             receiverOld2,
             receiverNew1,
-            assetId,
+            erc20,
             userId
         );
 
@@ -479,10 +479,10 @@ rule singleUserTimeUpdateNotChangingOtherUserBalance(method f, uint256 userId) {
     bytes32 dripsHashAfter; bytes32 dripsHistoryHashAfter;
     uint32 updateTimeAfter; uint128 balanceAfter; uint32 maxEndAfter;
 
-    dripsHashAfter, dripsHistoryHashAfter, updateTimeAfter, 
-     balanceAfter, maxEndAfter = _dripsState(eF, userId2, assetId);
-    
-    
+    dripsHashAfter, dripsHistoryHashAfter, updateTimeAfter,
+     balanceAfter, maxEndAfter = dripsState(eF, userId2, erc20);
+
+
     // check that balance of user2 was not modified
     assert balanceBefore == balanceAfter, "balanceOfUser2 changed";
 
@@ -491,7 +491,7 @@ rule singleUserTimeUpdateNotChangingOtherUserBalance(method f, uint256 userId) {
 
 
 rule helperTest(method f, uint256 userId) {
-    env e; 
+    env e;
     uint256 assetId;
     DH.DripsReceiver receiverOld1;
     DH.DripsReceiver receiverOld2;
@@ -511,7 +511,7 @@ rule helperTest(method f, uint256 userId) {
 
 
 rule unrelatedUserBalanceNotChangingParametric(
-        method f, uint256 senderId, uint256 receiverId, uint256 assetId) {
+        method f, uint256 senderId, uint256 receiverId, address erc20) {
     env e; env eB; env eF;
     calldataarg args;
 
@@ -520,8 +520,8 @@ rule unrelatedUserBalanceNotChangingParametric(
     uint32 updateTimeBefore; uint128 balanceBefore; uint32 maxEndBefore;
 
     dripsHashBefore, dripsHistoryHashBefore, updateTimeBefore,
-     balanceBefore, maxEndBefore = _dripsState(eB, receiverId, assetId);
-    
+     balanceBefore, maxEndBefore = dripsState(eB, receiverId, erc20);
+
     uint256 userId1; uint256 config1;
     uint256 userId2; uint256 config2;
     uint256 userId3; uint256 config3;
@@ -551,10 +551,10 @@ rule unrelatedUserBalanceNotChangingParametric(
     bytes32 dripsHashAfter; bytes32 dripsHistoryHashAfter;
     uint32 updateTimeAfter; uint128 balanceAfter; uint32 maxEndAfter;
 
-    dripsHashAfter, dripsHistoryHashAfter, updateTimeAfter, 
-     balanceAfter, maxEndAfter = _dripsState(eF, receiverId, assetId);
-    
-    
+    dripsHashAfter, dripsHistoryHashAfter, updateTimeAfter,
+     balanceAfter, maxEndAfter = dripsState(eF, receiverId, erc20);
+
+
     // check that balance of user2 was not modified
     assert balanceBefore == balanceAfter, "balanceOf receiverId changed";
 
@@ -577,7 +577,7 @@ rule unrelatedUserBalanceNotChangingParametric(
 // _dripsStorage().states[assetId][currRecv.userId].amtDeltas[_cycleOf(timestamp)].thisCycle
 // _dripsStorage().states[assetId][currRecv.userId].amtDeltas[__].nextCycle
 // _dripsStorage().states[assetId][currRecv.userId].nextReceivableCycle
-// 
+//
 // _dripsStorage().states[assetId][newRecv.userId].amtDeltas[__].thisCycle
 // _dripsStorage().states[assetId][newRecv.userId].amtDeltas[__].nextCycle
 // _dripsStorage().states[assetId][newRecv.userId].nextReceivableCycle

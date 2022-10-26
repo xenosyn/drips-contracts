@@ -30,7 +30,7 @@ certoraRun  certora/harness/UpdateReceiverStatesHarness.sol \
 --link  UpdateReceiverStatesHarness:reserve=Reserve \
 --packages openzeppelin-contracts=lib/openzeppelin-contracts/contracts \
 --path . \
---solc solc8.15 \
+--solc solc8.17 \
 --loop_iter 3 \
 --optimistic_loop \
 --staging \

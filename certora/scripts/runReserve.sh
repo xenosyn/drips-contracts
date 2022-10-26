@@ -30,7 +30,7 @@ certoraRun  certora/harness/ReserveHarness.sol \
 --verify ReserveHarness:certora/specs/Reserve.spec \
 --packages openzeppelin-contracts=lib/openzeppelin-contracts/contracts \
 --path . \
---solc solc8.15 \
+--solc solc8.17 \
 --loop_iter 3 \
 --optimistic_loop \
 --staging \

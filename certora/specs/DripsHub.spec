@@ -51,8 +51,8 @@ methods {
     getDripsReceiverLocalArr(bool, uint) returns (uint256, uint192, uint32, uint32) envfree
 
     //erc1967Slot(string) returns (bytes32) envfree
-    //_dripsState(uint256, uint256) envfree
-    
+    //dripsState(uint256, uint256) envfree
+
     // Summarizing external functions:
 
     // ./src/Drips.sol
@@ -163,7 +163,7 @@ methods {
             uint256 start,
             uint256 end
         ) returns (uint256 amt) => NONDET */
-    
+
 
 
 
@@ -213,7 +213,7 @@ methods {
         address to,
         uint256 amount
     ) returns (bool) => DISPATCHER(true);
-    
+
     transferFrom(
         address from,
         address to,
@@ -266,10 +266,10 @@ function requireValidSlots() returns bool {
     bytes32 _splitsStorageSlotMustValue = 0x4a4773e83022ffd434f8ef4bde63b284fd5172dc2a7b5e180d8b7135f9af9712;  // eip1967.splits.storage
     //bytes32 _splitsStorageSlotMustValue = erc1967Slot("eip1967.splits.storage")
 
-    return  (pausedSlot(e) == pausedSlotMustValue) &&
-            (_storageSlot(e) == _dripsHubStorageSlotMustValue) &&
-            (_dripsStorageSlot(e) == _dripsStorageSlotMustValue) &&
-            (_splitsStorageSlot(e) == _splitsStorageSlotMustValue);
+    return  (pausedStorageSlot(e) == pausedSlotMustValue) &&
+            (dripsHubStorageSlot(e) == _dripsHubStorageSlotMustValue) &&
+            (dripsStorageSlot(e) == _dripsStorageSlotMustValue) &&
+            (splitsStorageSlot(e) == _splitsStorageSlotMustValue);
 }
 
 /**************************************************
@@ -277,7 +277,7 @@ function requireValidSlots() returns bool {
  **************************************************/
 // Describe expressions over the system's variables
 // that should always hold.
-// Usually implemented via invariants 
+// Usually implemented via invariants
 
 /*
 // Validity of amount of receivers
@@ -328,7 +328,7 @@ invariant amtPerSecMustNeverBeZero()
  *                 RISK ANALYSIS                  *
  **************************************************/
 // Reasoning about the assets of the user\system and
-// from point of view of what should never happen 
+// from point of view of what should never happen
 
 
 
@@ -381,21 +381,21 @@ rule asTimePassesReceivableDripsGrow(){
 
     DH.DripsConfig configBefore = _helperCreateConfig(amtPerSec, start, duration);
     setDripsReceiverLocalArr(true, 0, receiverId, configBefore);
-    
+
     _newHelperSetDrips(e, dripperId, erc20, balanceDeltaBefore);
 
     // calculate the ReceivableDripsBefore of the receiver
     uint128 ReceivableDripsBefore; uint32 receivableCyclesBefore;
     // type(uint32).max = 2^32 - 1 = 4294967295
     require e1.block.timestamp > e.block.timestamp;
-    ReceivableDripsBefore, receivableCyclesBefore = receivableDrips(e1, receiverId, erc20, 4294967295);
+    ReceivableDripsBefore, receivableCyclesBefore = receiveDripsResult(e1, receiverId, erc20, 4294967295);
 
     // calculate the ReceivableDripsAfter of the receiver
     uint128 ReceivableDripsAfter; uint32 receivableCyclesAfter;
     // type(uint32).max = 2^32 - 1 = 4294967295
     require e2.block.timestamp > e1.block.timestamp;
     require e2.block.timestamp < 4294967295;
-    ReceivableDripsAfter, receivableCyclesAfter = receivableDrips(e2, receiverId, erc20, 4294967295);
+    ReceivableDripsAfter, receivableCyclesAfter = receiveDripsResult(e2, receiverId, erc20, 4294967295);
 
     assert ReceivableDripsAfter >= ReceivableDripsBefore;
 
@@ -420,8 +420,8 @@ rule cyclesAdditivity{
     //require e2.block.timestamp > e1.block.timestamp;
     storage init = lastStorage;
 
-    from1, to1 = _receivableDripsCyclesRange(e1, userId, assetId);
-    from2, to2 = _receivableDripsCyclesRange(e2, userId, assetId);
+    from1, to1 = __receivableDripsCyclesRange(e1, userId, assetId);
+    from2, to2 = __receivableDripsCyclesRange(e2, userId, assetId);
 
     //require to1-from1 == 2;
     //require to2-from2 == 3;
@@ -429,13 +429,13 @@ rule cyclesAdditivity{
     require e2.block.timestamp < 4294967295;
 
     uint128 receivableAmt1; uint32 receivableCycles1;
-    receivableAmt1, receivableCycles1 = _receivableDrips(e1, userId, assetId, maxCycles);
-        _receiveDrips(e1, userId, assetId, maxCycles);
+    receivableAmt1, receivableCycles1 = receiveDripsResult(e1, userId, erc20, maxCycles);
+        __receiveDrips(e1, userId, assetId, maxCycles);
     uint128 receivableAmt2; uint32 receivableCycles2;
-    receivableAmt2, receivableCycles2 = _receivableDrips(e2, userId, assetId, maxCycles);
+    receivableAmt2, receivableCycles2 = receiveDripsResult(e2, userId, erc20, maxCycles);
 
     uint128 receivableAmt12; uint32 receivableCycles12;
-    receivableAmt12, receivableCycles12 = _receivableDrips(e2, userId, assetId, maxCycles) at init;
+    receivableAmt12, receivableCycles12 = receiveDripsResult(e2, userId, erc20, maxCycles) at init;
 
     assert receivableAmt12 == receivableAmt1 + receivableAmt2;
 
@@ -537,7 +537,7 @@ rule settingSameDripsDoesntChangeReceivableDrips(){
     uint128 ReceivableDripsBefore; uint32 receivableCyclesBefore;
     // type(uint32).max = 2^32 - 1 = 4294967295
     require e1.block.timestamp > e.block.timestamp;
-    ReceivableDripsBefore, receivableCyclesBefore = receivableDrips(e1, currReceiverId, erc20, 4294967295);
+    ReceivableDripsBefore, receivableCyclesBefore = receiveDripsResult(e1, currReceiverId, erc20, 4294967295);
     */
 
     // call again updateReceiverStates() with the same parameters as the previous call
@@ -553,7 +553,7 @@ rule settingSameDripsDoesntChangeReceivableDrips(){
     // calculate the ReceivableDripsAfter of the receiver
     uint128 ReceivableDripsAfter; uint32 receivableCyclesAfter;
     require e2.block.timestamp < 4294967295;
-    ReceivableDripsAfter, receivableCyclesAfter = receivableDrips(e2, currReceiverId, erc20, 4294967295);
+    ReceivableDripsAfter, receivableCyclesAfter = receiveDripsResult(e2, currReceiverId, erc20, 4294967295);
     */
 
     assert thisCycleBefore == thisCycleAfter;
@@ -571,7 +571,7 @@ rule whoChangedBalanceOfUserId(method f, uint256 userId) {
     require requireValidSlots();
 
     calldataarg args;
-    uint256 assetId;
+    address erc20;
 
 
     bytes32 dripsHashBefore;
@@ -584,7 +584,7 @@ rule whoChangedBalanceOfUserId(method f, uint256 userId) {
      dripsHistoryHashBefore,
      updateTimeBefore,
      balanceBefore,
-     maxEndBefore = _dripsState(eB, userId, assetId);
+     maxEndBefore = dripsState(eB, userId, erc20);
 
     f(eF,args);  // call any function
 
@@ -598,7 +598,7 @@ rule whoChangedBalanceOfUserId(method f, uint256 userId) {
      dripsHistoryHashAfter,
      updateTimeAfter,
      balanceAfter,
-     maxEndAfter = _dripsState(eF, userId, assetId);
+     maxEndAfter = dripsState(eF, userId, erc20);
 
 
     assert balanceBefore == balanceAfter, "balanceOfUser changed";
@@ -617,15 +617,15 @@ rule whoChangedBalanceOfToken(method f, address erc20)
 
     require requireValidSlots();
 
-    bytes32 pausedSlotBefore = pausedSlot(e);  // eip1967.managed.paused
-    bytes32 _storageSlotBefore = _storageSlot(e);  // eip1967.dripsHub.storage
+    bytes32 pausedSlotBefore = pausedStorageSlot(e);  // eip1967.managed.paused
+    bytes32 _storageSlotBefore = dripsHubStorageSlot(e);  // eip1967.dripsHub.storage
 
     uint256 balanceBefore = totalBalance(e, erc20);
 
     f(e,args);
 
-    bytes32 _storageSlotAfter = _storageSlot(e);
-    bytes32 pausedSlotAfter = pausedSlot(e);
+    bytes32 _storageSlotAfter = dripsHubStorageSlot(e);
+    bytes32 pausedSlotAfter = pausedStorageSlot(e);
 
     uint256 balanceAfter = totalBalance(e, erc20);
 
@@ -636,7 +636,7 @@ rule whoChangedBalanceOfToken(method f, address erc20)
 
 rule receiverCannotLoseMoney() {
     require requireValidSlots();
-    // at any time it is impossible that receivableDrips(user) < 0;
+    // at any time it is impossible that receiveDripsResult(user) < 0;
     env e1; env e2;
     require e1.block.timestamp < e2.block.timestamp;
     require e2.block.timestamp < 4294967295;
@@ -652,8 +652,8 @@ rule receiverCannotLoseMoney() {
     uint32 receivableCyclesAfter;
 
 
-    receivableAmtBefore, receivableCyclesBefore = receivableDrips(e1, userId, erc20, maxCycles);
-    receivableAmtAfter, receivableCyclesAfter = receivableDrips(e2, userId, erc20, maxCycles);
+    receivableAmtBefore, receivableCyclesBefore = receiveDripsResult(e1, userId, erc20, maxCycles);
+    receivableAmtAfter, receivableCyclesAfter = receiveDripsResult(e2, userId, erc20, maxCycles);
 
     assert receivableAmtBefore <= receivableAmtAfter;
 }
@@ -662,9 +662,9 @@ rule receiverCannotLoseMoney() {
 // {
 //     // make sure there is only one sender and one receiver
 //     // make sure the sender is dripping to the receiver
-//     // calculate the _receivableDrips(receiver) before dripping stops
+//     // calculate the receiveDripsResult(receiver) before dripping stops
 //     // stop the dripping
-//     // calculate the _receivableDrips(receiver) after dripping stops
+//     // calculate the receiveDripsResult(receiver) after dripping stops
 //     // after == before
 // }
 
@@ -675,12 +675,12 @@ rule receiverCannotLoseMoney() {
 //     // require currReceivers.length == 0;
 
 //     // check the receivable balance of the user before:
-//     // (uint128 receivedAmtBefore, ) = Drips._receivableDrips(userId, assetId, type(uint32).max);
+//     // (uint128 receivedAmtBefore, ) = Drips.receiveDripsResult(userId, assetId, type(uint32).max);
 
 //     // start sending to the user
 
 //     // check the receivable balance of the user after:
-//     // (uint128 receivedAmtAfter, ) = Drips._receivableDrips(userId, assetId, type(uint32).max);
+//     // (uint128 receivedAmtAfter, ) = Drips.receiveDripsResult(userId, assetId, type(uint32).max);
 
 //     // assert receivedAmtAfter > receivedAmtBefore
 // }
@@ -732,7 +732,7 @@ rule integrityOfPast(method f)
     // collectableAll() can be used if the user has also set splits
     uint128 ReceivableDripsBefore; uint32 receivableCyclesBefore;
     // type(uint32).max = 2^32 - 1 = 4294967295
-    ReceivableDripsBefore, receivableCyclesBefore = receivableDrips(e1, receiverId, erc20, 4294967295);
+    ReceivableDripsBefore, receivableCyclesBefore = receiveDripsResult(e1, receiverId, erc20, 4294967295);
 
     // change the dripper configuration to start dripping to the receiver in the future
     // i.e. try to alter the past, as if the past dripping did not occur
@@ -757,7 +757,7 @@ rule integrityOfPast(method f)
     require e2.block.timestamp < newStart;
     uint128 ReceivableDripsAfter; uint32 receivableCyclesAfter;
     // type(uint32).max = 2^32 - 1 = 4294967295
-    ReceivableDripsAfter, receivableCyclesAfter = receivableDrips(e2, receiverId, erc20, 4294967295);
+    ReceivableDripsAfter, receivableCyclesAfter = receiveDripsResult(e2, receiverId, erc20, 4294967295);
 
     // validate that the past dripping stays, i.e. what was already dripped is still receivable
     assert ReceivableDripsBefore == ReceivableDripsAfter;
@@ -772,7 +772,7 @@ rule integrityOfSplit() {
     uint256 userId;
     address erc20;
     uint128 splittableBefore;
-    
+
     splittableBefore = splittable(e, userId, erc20);
 
     uint128 collectableAmt; uint128 splitAmt;
@@ -780,27 +780,6 @@ rule integrityOfSplit() {
     collectableAmt, splitAmt = helperSplit(e, userId, erc20);
 
     assert splittableBefore == collectableAmt + splitAmt;
-
-    //assert false;  // sanity
-}
-
-
-rule integrityOfCollectAll() {
-    require requireValidSlots();
-    env e;
-    require e.block.timestamp < 4294967295; // type(uint32).max = 2^32 - 1 = 4294967295
-    //require e.block.timestamp == 1000000;
-    uint256 userId;
-    address erc20;
-    uint256 balanceBefore; uint256 balanceAfter;
-
-    helperCollectAll(e, userId, erc20);    
-    balanceBefore = totalBalance(e, erc20);
-
-    helperCollectAll(e, userId, erc20);    
-    balanceAfter = totalBalance(e, erc20);
-
-    assert balanceBefore == balanceAfter;
 
     //assert false;  // sanity
 }
@@ -822,16 +801,16 @@ rule integrityOfCollectAll() {
 //     uint32 updateTimeBefore; uint128 balanceBefore; uint32 maxEndBefore;
 
 //     dripsHashBefore, dripsHistoryHashBefore, updateTimeBefore,
-//      balanceBefore, maxEndBefore = _dripsState(eB, userId2, assetId);
-    
+//      balanceBefore, maxEndBefore = dripsState(eB, userId2, assetId);
+
 //     // assert false; // false 0
-    
+
 //     // step 2 - setup user1 changes and then call _updateReceiverStates()
 //     /*  //setting values to config by create:
 //         uint192 _amtPerSec;
 //         uint32 _start;
 //         uint32 _duration;
-    
+
 
 //     require _amtPerSec != 0;
 //     */
@@ -846,16 +825,16 @@ rule integrityOfCollectAll() {
 //     DH.DripsReceiver receiverOld1;
 //     require receiverOld1.userId == userId1;
 //     require receiverOld1.config == configOld1;
-    
+
 //     DH.DripsReceiver receiverOld2;
 //     require receiverOld2.userId == userId2;
 //     require receiverOld2.config == configOld2;
-    
+
 //     DH.DripsReceiver receiverNew1;
 //     require receiverNew1.userId == userId1;
 //     require receiverNew1.config == configNew1;
-    
-    
+
+
 
 
 //     // DripsReceiver[] memory currReceivers;
@@ -875,7 +854,7 @@ rule integrityOfCollectAll() {
 //     // uint32 currMaxEnd = state.maxEnd;
 
 //     // uint32 newMaxEnd = sizeof(uint32);
-    
+
 
 //     // assert false;  // false 1
 //      //assert configOld2 != configNew2;  //returned 0
@@ -895,10 +874,10 @@ rule integrityOfCollectAll() {
 //     bytes32 dripsHashAfter; bytes32 dripsHistoryHashAfter;
 //     uint32 updateTimeAfter; uint128 balanceAfter; uint32 maxEndAfter;
 
-//     dripsHashAfter, dripsHistoryHashAfter, updateTimeAfter, 
-//      balanceAfter, maxEndAfter = _dripsState(eF, userId2, assetId);
-    
-    
+//     dripsHashAfter, dripsHistoryHashAfter, updateTimeAfter,
+//      balanceAfter, maxEndAfter = dripsState(eF, userId2, assetId);
+
+
 //     // check that balance of user2 was not modified
 //     assert balanceBefore == balanceAfter, "balanceOfUser2 changed";
 
@@ -907,7 +886,7 @@ rule integrityOfCollectAll() {
 
 
 // rule helperTest(method f, uint256 userId) {
-//     env e; 
+//     env e;
 //     uint256 assetId;
 //     DH.DripsReceiver receiverOld1;
 //     DH.DripsReceiver receiverOld2;
@@ -936,8 +915,8 @@ rule integrityOfCollectAll() {
 //     uint32 updateTimeBefore; uint128 balanceBefore; uint32 maxEndBefore;
 
 //     dripsHashBefore, dripsHistoryHashBefore, updateTimeBefore,
-//      balanceBefore, maxEndBefore = _dripsState(eB, receiverId, assetId);
-    
+//      balanceBefore, maxEndBefore = dripsState(eB, receiverId, assetId);
+
 //     uint256 userId1; uint256 config1;
 //     uint256 userId2; uint256 config2;
 //     uint256 userId3; uint256 config3;
@@ -967,10 +946,10 @@ rule integrityOfCollectAll() {
 //     bytes32 dripsHashAfter; bytes32 dripsHistoryHashAfter;
 //     uint32 updateTimeAfter; uint128 balanceAfter; uint32 maxEndAfter;
 
-//     dripsHashAfter, dripsHistoryHashAfter, updateTimeAfter, 
-//      balanceAfter, maxEndAfter = _dripsState(eF, receiverId, assetId);
-    
-    
+//     dripsHashAfter, dripsHistoryHashAfter, updateTimeAfter,
+//      balanceAfter, maxEndAfter = dripsState(eF, receiverId, assetId);
+
+
 //     // check that balance of user2 was not modified
 //     assert balanceBefore == balanceAfter, "balanceOf receiverId changed";
 
@@ -993,7 +972,7 @@ rule integrityOfCollectAll() {
 // _dripsStorage().states[assetId][currRecv.userId].amtDeltas[_cycleOf(timestamp)].thisCycle
 // _dripsStorage().states[assetId][currRecv.userId].amtDeltas[__].nextCycle
 // _dripsStorage().states[assetId][currRecv.userId].nextReceivableCycle
-// 
+//
 // _dripsStorage().states[assetId][newRecv.userId].amtDeltas[__].thisCycle
 // _dripsStorage().states[assetId][newRecv.userId].amtDeltas[__].nextCycle
 // _dripsStorage().states[assetId][newRecv.userId].nextReceivableCycle

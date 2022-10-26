@@ -29,7 +29,7 @@ certoraRun  certora/harness/DripsHubHarness.sol \
 --link  DripsHubHarness:reserve=Reserve \
 --packages openzeppelin-contracts=lib/openzeppelin-contracts/contracts \
 --path . \
---solc solc8.15 \
+--solc solc8.17 \
 --loop_iter 1 \
 --optimistic_loop \
 --staging \

@@ -5,7 +5,10 @@ import {Splits, SplitsReceiver} from "../../src/Splits.sol";
 import {Managed} from "../../src/Managed.sol";
 
 contract SplitsHarness is Splits, Managed {
-    constructor() Splits(erc1967Slot("eip1967.splits.storage")) {}
+
+    bytes32 public immutable splitsStorageSlot = erc1967Slot("eip1967.splits.storage");
+
+    constructor() Splits(splitsStorageSlot) {}
 
     SplitsReceiver[] public currSplitReceiversLocal1;
     SplitsReceiver[] public currSplitReceiversLocal2;
@@ -30,16 +33,6 @@ contract SplitsHarness is Splits, Managed {
         }
     }
 
-    function getSplitsStorageSlot(
-    ) public view returns (bytes32) {
-        return _splitsStorageSlot;
-    }
-
-    function getPausedSlot(
-    ) public view returns (bytes32) {
-        return pausedSlot;
-    }
-
     function upgradeTo(address newImplementation
     ) external override onlyProxy {}  // empty function to resolve function call
 
@@ -52,11 +45,11 @@ contract SplitsHarness is Splits, Managed {
     }
 
     function splitResults(uint256 userId, bool selectCurrSplitReceivers, uint128 amount
-    ) public view returns (uint128 collectableAmt, uint128 splitAmt) {
+    ) public view returns (uint128 collectableAmt) {
         if (selectCurrSplitReceivers) {
-            return _splitResults(userId, currSplitReceiversLocal1, amount);
+            return _splitResult(userId, currSplitReceiversLocal1, amount);
         } else {
-            return _splitResults(userId, currSplitReceiversLocal2, amount);
+            return _splitResult(userId, currSplitReceiversLocal2, amount);
         }
     }
 
@@ -82,25 +75,44 @@ contract SplitsHarness is Splits, Managed {
     function give(uint256 userId, uint256 receiver, uint256 assetId, uint128 amt
     ) public {
         return _give(userId, receiver, assetId, amt);
-    } 
+    }
 
     function setSplits(uint256 userId, bool selectCurrSplitReceivers
     ) public {
         if (selectCurrSplitReceivers) {
-            return _setSplits(userId, currSplitReceiversLocal1);
+            _setSplits(userId, currSplitReceiversLocal1);
         } else {
-            return _setSplits(userId, currSplitReceiversLocal2);
+            _setSplits(userId, currSplitReceiversLocal2);
         }
     }
 
     function assertSplitsValid(bool selectCurrSplitReceivers, bytes32 receiversHash
     ) public {
-        SplitsReceiver[] memory emptyReceivers = new SplitsReceiver[] (0);
         if (selectCurrSplitReceivers) {
-            return _assertSplitsValid(currSplitReceiversLocal1, receiversHash);
+            __assertSplitsValid(currSplitReceiversLocal1, receiversHash);
         } else {
-            return _assertSplitsValid(currSplitReceiversLocal2, receiversHash);
+            __assertSplitsValid(currSplitReceiversLocal2, receiversHash);
         }
+    }
+
+    function __assertSplitsValid(SplitsReceiver[] memory receivers, bytes32 receiversHash) private {
+        require(receivers.length <= _MAX_SPLITS_RECEIVERS, "Too many splits receivers");
+        uint64 totalWeight = 0;
+        uint256 prevUserId;
+        for (uint256 i = 0; i < receivers.length; i++) {
+            SplitsReceiver memory receiver = receivers[i];
+            uint32 weight = receiver.weight;
+            require(weight != 0, "Splits receiver weight is zero");
+            totalWeight += weight;
+            uint256 userId = receiver.userId;
+            if (i > 0) {
+                require(prevUserId != userId, "Duplicate splits receivers");
+                require(prevUserId < userId, "Splits receivers not sorted by user ID");
+            }
+            prevUserId = userId;
+            emit SplitsReceiverSeen(receiversHash, userId, weight);
+        }
+        require(totalWeight <= _TOTAL_SPLITS_WEIGHT, "Splits weights sum too high");
     }
 
     function assertCurrSplits(uint256 userId, bool selectCurrSplitReceivers

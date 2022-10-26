@@ -10,13 +10,9 @@ methods {
 
 function requireValidSlots() returns bool {
     env e;
-    bytes32 pausedSlotMustValue = 0x2d3dd64cfe36f9c22b4321979818bccfbeada88f68e06ff08869db50f24e4d58;
-    //bytes32 pausedSlotMustValue = erc1967Slot("eip1967.managed.paused");
-    bytes32 _splitsStorageSlotMustValue = 0x4a4773e83022ffd434f8ef4bde63b284fd5172dc2a7b5e180d8b7135f9af9712;
     //bytes32 _splitsStorageSlotMustValue = erc1967Slot("eip1967.splits.storage")
-
-    return  (getPausedSlot(e) == pausedSlotMustValue) &&
-            (getSplitsStorageSlot(e) == _splitsStorageSlotMustValue);
+    bytes32 _splitsStorageSlotMustValue = 0x4a4773e83022ffd434f8ef4bde63b284fd5172dc2a7b5e180d8b7135f9af9712;
+    return  (splitsStorageSlot(e) == _splitsStorageSlotMustValue);
 }
 
 // sanity rule - must always fail
@@ -34,7 +30,7 @@ rule sanity(method f){
 
 // _splitResults(uint256 userId, SplitsReceiver[] memory currReceivers, uint128 amount)
 // returns (uint128 collectableAmt, uint128 splitAmt)
-// 
+//
 // assert amount >= collectableAmt;
 // assert amount >= splitAmt;
 // assert amount == collectableAmt + splitAmt;
@@ -46,11 +42,9 @@ rule verifySplitResults() {
     uint128 collectableAmt;
     uint128 splitAmt;
 
-    collectableAmt, splitAmt = splitResults(e, userId, true, amount);
+    collectableAmt = splitResults(e, userId, true, amount);
 
     assert amount >= collectableAmt;
-    assert amount >= splitAmt;
-    assert amount == collectableAmt + splitAmt;
 
     //assert false; // sanity
 }
@@ -58,7 +52,7 @@ rule verifySplitResults() {
 
 // _split(uint256 userId, uint256 assetId, SplitsReceiver[] memory currReceivers)
 // returns (uint128 collectableAmt, uint128 splitAmt)
-// 
+//
 // assert splitsStates[userId].balances[assetId].balance.splittable Before >= After;
 // assert splitsStates[userId].balances[assetId].balance.collectable After >= Before;
 // assert splittableBefore >= splittableAfter + collectableAfter - collectableBefore;
@@ -98,7 +92,7 @@ rule verifySplit() {
 // rule 1: after running _collect() -> collectable must be zero
 // _collect(userId, assetId);
 // assert _splitsStorage().splitsStates[userId].balances[assetId].collectable == 0;
-// 
+//
 // rule 2: collect() should not revert:
 // _collect@withrevert(userId, assetId);
 // assert !lastReverted;
@@ -139,10 +133,10 @@ rule verifyCollect2() {
 
 
 // _give(uint256 userId, uint256 receiver, uint256 assetId, uint128 amt)
-// 
+//
 // rule 1: the splittable of the receiver must increase by amt
 // assert splittableAfter[receiver] == splittableBefore[receiver] + amt;
-// 
+//
 // rule 2: the splittable of any other user that is not receiver should not change
 // require user != receiver;
 // assert splittableBefore[user] == splittableAfter[user];
