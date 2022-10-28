@@ -42,13 +42,13 @@ struct SplitsReceiver {
 methods {
     // Harness method getters:
     //getMaxDripsReceivers() returns (uint8) envfree
-    //getAmtPerSec() returns (uint192) envfree
-    getCycleSecs() returns (uint32) envfree
-    _helperCreateConfig(uint192, uint32, uint32) returns (uint256) envfree
+    //getAmtPerSec() returns (uint160) envfree
+    cycleSecs() returns (uint32) envfree
+    helperCreateConfig(uint32, uint160, uint32, uint32) returns (uint256) envfree
     setDripsReceiverLocalArr(bool, uint, uint256, uint256) envfree
     getDripsReceiverLocalLength(bool) envfree
     getRelevantStateVars(uint256, uint256, uint32) envfree
-    getDripsReceiverLocalArr(bool, uint) returns (uint256, uint192, uint32, uint32) envfree
+    getDripsReceiverLocalArr(bool, uint) returns (uint256, uint32, uint160, uint32, uint32) envfree
 
     //erc1967Slot(string) returns (bytes32) envfree
     //dripsState(uint256, uint256) envfree
@@ -266,10 +266,10 @@ function requireValidSlots() returns bool {
     bytes32 _splitsStorageSlotMustValue = 0x4a4773e83022ffd434f8ef4bde63b284fd5172dc2a7b5e180d8b7135f9af9712;  // eip1967.splits.storage
     //bytes32 _splitsStorageSlotMustValue = erc1967Slot("eip1967.splits.storage")
 
-    return  (pausedStorageSlot(e) == pausedSlotMustValue) &&
-            (dripsHubStorageSlot(e) == _dripsHubStorageSlotMustValue) &&
-            (dripsStorageSlot(e) == _dripsStorageSlotMustValue) &&
-            (splitsStorageSlot(e) == _splitsStorageSlotMustValue);
+    return  (pausedSlot(e) == pausedSlotMustValue) &&
+            (_storageSlot(e) == _dripsHubStorageSlotMustValue) &&
+            (_dripsStorageSlot(e) == _dripsStorageSlotMustValue) &&
+            (_splitsStorageSlot(e) == _splitsStorageSlotMustValue);
 }
 
 /**************************************************
@@ -342,7 +342,7 @@ invariant amtPerSecMustNeverBeZero()
 
 rule sanity(method f){
 
-    //uint32 cycleSecs = getCycleSecs();
+    //uint32 cycleSecs = cycleSecs();
     //require cycleSecs == 2;
 
     //setupState();
@@ -372,17 +372,17 @@ rule asTimePassesReceivableDripsGrow(){
     int128 balanceDeltaBefore;
 
     uint256 receiverId;
-    uint192 amtPerSec;      uint32 start;           uint32 duration;
+    uint32 dripId; uint160 amtPerSec;      uint32 start;           uint32 duration;
 
     // setup one new receiver only
     require getDripsReceiverLocalLength(false) == 0; // false -> sets the currReceivers
     require getDripsReceiverLocalLength(true) == 1;
     require start == e.block.timestamp;
 
-    DH.DripsConfig configBefore = _helperCreateConfig(amtPerSec, start, duration);
+    DH.DripsConfig configBefore = helperCreateConfig(dripId, amtPerSec, start, duration);
     setDripsReceiverLocalArr(true, 0, receiverId, configBefore);
 
-    _newHelperSetDrips(e, dripperId, erc20, balanceDeltaBefore);
+    helperSetDrips(e, dripperId, erc20, balanceDeltaBefore);
 
     // calculate the ReceivableDripsBefore of the receiver
     uint128 ReceivableDripsBefore; uint32 receivableCyclesBefore;
@@ -420,8 +420,8 @@ rule cyclesAdditivity{
     //require e2.block.timestamp > e1.block.timestamp;
     storage init = lastStorage;
 
-    from1, to1 = __receivableDripsCyclesRange(e1, userId, assetId);
-    from2, to2 = __receivableDripsCyclesRange(e2, userId, assetId);
+    from1, to1 = _receivableDripsCyclesRange(e1, userId, assetId);
+    from2, to2 = _receivableDripsCyclesRange(e2, userId, assetId);
 
     //require to1-from1 == 2;
     //require to2-from2 == 3;
@@ -430,7 +430,7 @@ rule cyclesAdditivity{
 
     uint128 receivableAmt1; uint32 receivableCycles1;
     receivableAmt1, receivableCycles1 = receiveDripsResult(e1, userId, erc20, maxCycles);
-        __receiveDrips(e1, userId, assetId, maxCycles);
+        _receiveDrips(e1, userId, assetId, maxCycles);
     uint128 receivableAmt2; uint32 receivableCycles2;
     receivableAmt2, receivableCycles2 = receiveDripsResult(e2, userId, erc20, maxCycles);
 
@@ -452,11 +452,11 @@ rule updateReceiverStatesEquivalency() {
     // limit the input size of the function
     require getDripsReceiverLocalLength(false) == 1; // false -> sets the currReceivers
     require getDripsReceiverLocalLength(true) == 1;
-    uint256 currReceiverId; uint192 currAmtPerSec; uint32 currStart; uint32 currDuration;
-    currReceiverId, currAmtPerSec, currStart, currDuration = getDripsReceiverLocalArr(false, 0);
+    uint256 currReceiverId; uint32 dripId; uint160 currAmtPerSec; uint32 currStart; uint32 currDuration;
+    currReceiverId, dripId, currAmtPerSec, currStart, currDuration = getDripsReceiverLocalArr(false, 0);
 
-    uint256 newReceiverId; uint192 newAmtPerSec; uint32 newStart; uint32 newDuration;
-    newReceiverId, newAmtPerSec, newStart, newDuration = getDripsReceiverLocalArr(true, 0);
+    uint256 newReceiverId; uint32 newDripId; uint160 newAmtPerSec; uint32 newStart; uint32 newDuration;
+    newReceiverId, newDripId, newAmtPerSec, newStart, newDuration = getDripsReceiverLocalArr(true, 0);
 
     //require currReceiverId != newReceiverId;  // with this requirement the rule passes!
 
@@ -509,11 +509,11 @@ rule settingSameDripsDoesntChangeReceivableDrips(){
     // set both the inputs for currReceivers and newReceivers to be the same
     require getDripsReceiverLocalLength(false) == 1; // false -> sets the currReceivers
     require getDripsReceiverLocalLength(true) == 1;
-    uint256 currReceiverId; uint192 currAmtPerSec; uint32 currStart; uint32 currDuration;
-    currReceiverId, currAmtPerSec, currStart, currDuration = getDripsReceiverLocalArr(false, 0);
+    uint256 currReceiverId; uint32 dripId; uint160 currAmtPerSec; uint32 currStart; uint32 currDuration;
+    currReceiverId, dripId, currAmtPerSec, currStart, currDuration = getDripsReceiverLocalArr(false, 0);
 
-    uint256 newReceiverId; uint192 newAmtPerSec; uint32 newStart; uint32 newDuration;
-    newReceiverId, newAmtPerSec, newStart, newDuration = getDripsReceiverLocalArr(true, 0);
+    uint256 newReceiverId; uint32 newDripId; uint160 newAmtPerSec; uint32 newStart; uint32 newDuration;
+    newReceiverId, newDripId, newAmtPerSec, newStart, newDuration = getDripsReceiverLocalArr(true, 0);
 
     require currReceiverId == newReceiverId;
     require currAmtPerSec == newAmtPerSec;
@@ -617,15 +617,15 @@ rule whoChangedBalanceOfToken(method f, address erc20)
 
     require requireValidSlots();
 
-    bytes32 pausedSlotBefore = pausedStorageSlot(e);  // eip1967.managed.paused
-    bytes32 _storageSlotBefore = dripsHubStorageSlot(e);  // eip1967.dripsHub.storage
+    bytes32 pausedSlotBefore = pausedSlot(e);  // eip1967.managed.paused
+    bytes32 _storageSlotBefore = _storageSlot(e);  // eip1967.dripsHub.storage
 
     uint256 balanceBefore = totalBalance(e, erc20);
 
     f(e,args);
 
-    bytes32 _storageSlotAfter = dripsHubStorageSlot(e);
-    bytes32 pausedSlotAfter = pausedStorageSlot(e);
+    bytes32 _storageSlotAfter = _storageSlot(e);
+    bytes32 pausedSlotAfter = pausedSlot(e);
 
     uint256 balanceAfter = totalBalance(e, erc20);
 
@@ -697,13 +697,14 @@ rule integrityOfPast(method f)
     require receiverId == 2;
 
     // setup one dripper and one receiver with start dripping timestamp of now
-    uint192 amtPerSec;      uint32 start;           uint32 duration;
+    uint32 dripId; uint160 amtPerSec;      uint32 start;           uint32 duration;
 
+    require dripId == 0;
     require amtPerSec == 1;
     require start == 5;
     require duration == 100;
 
-    DH.DripsConfig configBefore = _helperCreateConfig(amtPerSec, start, duration);
+    DH.DripsConfig configBefore = helperCreateConfig(dripId, amtPerSec, start, duration);
 
     require e0.block.timestamp == start;
 
@@ -721,7 +722,7 @@ rule integrityOfPast(method f)
     //helperSetDrips01(e0, dripperId, erc20, currReceiverBefore, balanceDelta, newReceiverBefore);
 
     // let at least one cycle pass
-    uint32 cycleSecs = getCycleSecs();
+    uint32 cycleSecs = cycleSecs();
 
     require cycleSecs == 2;
 
@@ -739,7 +740,7 @@ rule integrityOfPast(method f)
     // use the same amtPerSec and duration, only change the start time to the future
     uint32 newStart;
     require newStart > e1.block.timestamp + 10 * cycleSecs;
-    DH.DripsConfig configAfter = _helperCreateConfig(amtPerSec, newStart, duration);
+    DH.DripsConfig configAfter = helperCreateConfig(dripId, amtPerSec, newStart, duration);
 
     DH.DripsReceiver newReceiverAfter;
     require newReceiverAfter.userId == receiverId;
@@ -807,7 +808,8 @@ rule integrityOfSplit() {
 
 //     // step 2 - setup user1 changes and then call _updateReceiverStates()
 //     /*  //setting values to config by create:
-//         uint192 _amtPerSec;
+//         uint32 _dripId;
+//         uint160 _amtPerSec;
 //         uint32 _start;
 //         uint32 _duration;
 
