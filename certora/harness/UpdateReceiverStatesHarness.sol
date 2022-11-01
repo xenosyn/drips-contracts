@@ -1,30 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-onl
 pragma solidity ^0.8.15;
 
-import {Drips, DripsConfig, DripsHistory, DripsConfigImpl, DripsReceiver} from "../../src/Drips.sol";
-import {IReserve} from "../../src/Reserve.sol";
-import {Managed} from "../../src/Managed.sol";
-import {Splits, SplitsReceiver} from "../../src/Splits.sol";
-import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
-import {DripsHub} from "../../src/DripsHub.sol";
+import {Drips, DripsConfig, DripsHistory, DripsConfigImpl, DripsReceiver,
+IReserve, Managed, Splits, SplitsReceiver, IERC20, DripsHub } from "../monger/DripsHub.sol";
 
 
 contract UpdateReceiverStatesHarness is DripsHub {
 
-    bytes32 public immutable dripsHubStorageSlot = erc1967Slot("eip1967.dripsHub.storage");
-    bytes32 public immutable pausedStorageSlot = erc1967Slot("eip1967.managed.paused");
-    bytes32 public immutable dripsStorageSlot = erc1967Slot("eip1967.drips.storage");
-    bytes32 public immutable splitsStorageSlot = erc1967Slot("eip1967.splits.storage");
-
     constructor(uint32 cycleSecs_, IReserve reserve_) DripsHub(cycleSecs_, reserve_) {}
-
-    function __dripsStorage() private view returns (DripsStorage storage dripsStorage) {
-        bytes32 slot = dripsStorageSlot;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            dripsStorage.slot := slot
-        }
-    }
 
     // // no old, 3 new
     // function _helperUpdateReceiverStates_0Old_3New(
@@ -173,13 +156,13 @@ contract UpdateReceiverStatesHarness is DripsHub {
         receiversNew[0] = receiver1;
         receiversNew[1] = receiver2;
 
-        DripsState storage state = __dripsStorage().states[assetId][userId];
+        DripsState storage state = _dripsStorage().states[assetId][userId];
         uint32 lastUpdate; // = state.updateTime;
         uint32 currMaxEnd; // = state.maxEnd;
         uint32 newMaxEnd;
 
-        __updateReceiverStates(
-            __dripsStorage().states[assetId],
+        _updateReceiverStates(
+            _dripsStorage().states[assetId],
             receiversOld,
             lastUpdate,
             currMaxEnd,
@@ -203,13 +186,13 @@ contract UpdateReceiverStatesHarness is DripsHub {
 
         DripsReceiver[] memory  receiversNew = new DripsReceiver[] (0);
 
-        DripsState storage state = __dripsStorage().states[assetId][userId];
+        DripsState storage state = _dripsStorage().states[assetId][userId];
         uint32 lastUpdate; // = state.updateTime;
         uint32 currMaxEnd; // = state.maxEnd;
         uint32 newMaxEnd;
 
-        __updateReceiverStates(
-            __dripsStorage().states[assetId],
+        _updateReceiverStates(
+            _dripsStorage().states[assetId],
             receiversOld,
             lastUpdate,
             currMaxEnd,
@@ -233,13 +216,13 @@ contract UpdateReceiverStatesHarness is DripsHub {
         DripsReceiver[] memory  receiversNew = new DripsReceiver[] (1);
         receiversNew[0] = receiver2;
 
-        DripsState storage state = __dripsStorage().states[assetId][userId];
+        DripsState storage state = _dripsStorage().states[assetId][userId];
         uint32 lastUpdate; // = state.updateTime;
         uint32 currMaxEnd; // = state.maxEnd;
         uint32 newMaxEnd;
 
-        __updateReceiverStates(
-            __dripsStorage().states[assetId],
+        _updateReceiverStates(
+            _dripsStorage().states[assetId],
             receiversOld,
             lastUpdate,
             currMaxEnd,
@@ -282,7 +265,7 @@ contract UpdateReceiverStatesHarness is DripsHub {
         receiversNew[0] = receiverNew1;
         //receiversNew[1] = receiverOld2;
 
-        DripsState storage state = __dripsStorage().states[assetId][userId];
+        DripsState storage state = _dripsStorage().states[assetId][userId];
         uint32 lastUpdate = state.updateTime;
         uint32 currMaxEnd = state.maxEnd;
 
@@ -290,8 +273,8 @@ contract UpdateReceiverStatesHarness is DripsHub {
 
         //require (false);  //require false
         //return; //return 1
-        __updateReceiverStates(
-            __dripsStorage().states[assetId],
+        _updateReceiverStates(
+            _dripsStorage().states[assetId],
             receiversOld,
             lastUpdate,
             currMaxEnd,
@@ -300,15 +283,8 @@ contract UpdateReceiverStatesHarness is DripsHub {
         );
     }
 
-
-
-
-    function getCycleSecs() public view returns (uint32) {
-        return Drips._cycleSecs;
-    }
-
     function setBalanceOfUserId (uint256 assetId, uint256 userId, uint128 setValue) public {
-        DripsState storage state = __dripsStorage().states[assetId][userId];
+        DripsState storage state = _dripsStorage().states[assetId][userId];
         state.balance = setValue;
     }
 
@@ -345,14 +321,14 @@ contract UpdateReceiverStatesHarness is DripsHub {
     //mapping(uint256 => uint128) public dummyNewBalance;  // userId -> balances
 
     //Creating a simplified function to override the one that causes a timeout
-    function __updateReceiverStates(
+    function _updateReceiverStates(
         mapping(uint256 => DripsState) storage states,
         DripsReceiver[] memory currReceivers,
         uint32 lastUpdate,
         uint32 currMaxEnd,
         DripsReceiver[] memory newReceivers,
         uint32 newMaxEnd
-    ) internal {  // notice the override
+    ) internal override {  // notice the override
     //) internal {
 
         //DripsState storage state = Drips._dripsStorage().states[assetId][userId];

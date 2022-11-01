@@ -9,6 +9,8 @@ then
     MSG=": $2"
 fi
 
+certora/scripts/monger.sh DripsHub.sol
+
 #certoraRun  certora/harness/DripsHubHarness.sol \
 #certoraRun  src/DripsHub.sol \
 #--link  DripsHubHarness:reserve=Reserve \
@@ -36,6 +38,7 @@ certoraRun  certora/harness/UpdateReceiverStatesHarness.sol \
 --staging \
 --send_only \
 $RULE  \
+--typecheck_only \
 --msg "radicle -$RULE $MSG" #\
 #--debug
 
