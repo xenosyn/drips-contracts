@@ -8,16 +8,8 @@ methods {
     // splitResults(uint256, bool, uint128) returns (uint128, uint128)
 }
 
-function requireValidSlots() returns bool {
-    env e;
-    //bytes32 _splitsStorageSlotMustValue = erc1967Slot("eip1967.splits.storage")
-    bytes32 _splitsStorageSlotMustValue = 0x4a4773e83022ffd434f8ef4bde63b284fd5172dc2a7b5e180d8b7135f9af9712;
-    return  (splitsStorageSlot(e) == _splitsStorageSlotMustValue);
-}
-
 // sanity rule - must always fail
 rule sanity(method f){
-    require requireValidSlots();
     env e;
     calldataarg args;
     f(e,args);
@@ -69,13 +61,13 @@ rule verifySplit() {
     uint128 collectableBefore;
     uint128 collectableAfter;
 
-    splittableBefore = splittable(e, userId, assetId);
-    collectableBefore = collectable(e, userId, assetId);
+    splittableBefore = _splittable(e, userId, assetId);
+    collectableBefore = _collectable(e, userId, assetId);
 
     collectableAmt, splitAmt = split(e, userId, assetId, true);
 
-    splittableAfter = splittable(e, userId, assetId);
-    collectableAfter = collectable(e, userId, assetId);
+    splittableAfter = _splittable(e, userId, assetId);
+    collectableAfter = _collectable(e, userId, assetId);
 
     assert splittableBefore >= splittableAfter;
     assert collectableBefore <= collectableAfter;
@@ -107,9 +99,9 @@ rule verifyCollect1() {
     uint128 collectableBefore;
     uint128 collectableAfter;
 
-    collectableBefore = collectable(e, userId, assetId);
-    collectedAmt = collect(e, userId, assetId);
-    collectableAfter = collectable(e, userId, assetId);
+    collectableBefore = _collectable(e, userId, assetId);
+    collectedAmt = _collect(e, userId, assetId);
+    collectableAfter = _collectable(e, userId, assetId);
 
     assert collectableAfter == 0;
 
@@ -125,7 +117,7 @@ rule verifyCollect2() {
     require e.msg.sender != 0;  // prevents revert
     require e.msg.value == 0;  // prevents revert
 
-    collectedAmt = collect@withrevert(e, userId, assetId);
+    collectedAmt = _collect@withrevert(e, userId, assetId);
     assert !lastReverted;
 
     //assert false;  // sanity
@@ -151,9 +143,9 @@ rule verifyGive1() {
     uint128 splittableBefore;
     uint128 splittableAfter;
 
-    splittableBefore = splittable(e, receiver, assetId);
-    give(e, userId, receiver, assetId, amt);
-    splittableAfter = splittable(e, receiver, assetId);
+    splittableBefore = _splittable(e, receiver, assetId);
+    _give(e, userId, receiver, assetId, amt);
+    splittableAfter = _splittable(e, receiver, assetId);
 
     assert splittableAfter == splittableBefore + amt;
 
@@ -173,9 +165,9 @@ rule verifyGive2() {
 
     require otherUser != receiver;
 
-    splittableBefore = splittable(e, otherUser, assetId);
-    give(e, userId, receiver, assetId, amt);
-    splittableAfter = splittable(e, otherUser, assetId);
+    splittableBefore = _splittable(e, otherUser, assetId);
+    _give(e, userId, receiver, assetId, amt);
+    splittableAfter = _splittable(e, otherUser, assetId);
 
     assert splittableAfter == splittableBefore;
 
