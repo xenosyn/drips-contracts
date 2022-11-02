@@ -29,8 +29,8 @@ methods{
     beforeWithdrawal(address, uint256) => NONDET //HAVOC_ALL
     beforeEnd(address, uint256) => NONDET //HAVOC_ALL
 
-    reserveH.getDeposited(address) envfree
-    reserveH.getPlugins(address) envfree
+    reserveH.deposited(address) envfree
+    reserveH.plugins(address) envfree
 }
 
 
@@ -54,24 +54,27 @@ rule sanity(method f){
 }
 
 // rule - add/remove specific user doesn't change status of other users
-rule whoChangedUserState(method f) {
+rule whoChangedUserState(method f)
+filtered {
+    f -> f.selector != addUser(address).selector && f.selector != removeUser(address).selector
+} {
     env e;
     calldataarg args;
-    
+
     address userA;
     address userB;
 
     bool isUserBefore;
     bool isUserAfter;
 
-    isUserBefore = getIsUser(e, userB);
+    isUserBefore = isUser(e, userB);
 
     f(e,args);
     // addUser(userA);
     // removeUser(userA);
     // require userA != userB;
 
-    isUserAfter = getIsUser(e, userB);
+    isUserAfter = isUser(e, userB);
 
     assert isUserBefore == isUserAfter;
 }
@@ -90,11 +93,11 @@ rule totalMoneyIsConstant(method f) {
 
     balanceOfUserBefore = dummyERC20Token.balanceOf(user);
     balanceOfReserveBefore = dummyERC20Token.balanceOf(reserveH);
-    depositedBefore = getDeposited(dummyERC20Token);
+    depositedBefore = deposited(dummyERC20Token);
 
     require depositedBefore == balanceOfReserveBefore;
     //require e.msg.sender != 0;
-    require reserveH.getPlugins(dummyERC20Token) == 0;
+    require reserveH.plugins(dummyERC20Token) == 0;
 
     deposit(e, dummyERC20Token, user, amtDeposited);
     //f(e,args);
@@ -104,7 +107,7 @@ rule totalMoneyIsConstant(method f) {
 
     balanceOfUserAfter = dummyERC20Token.balanceOf(user);
     balanceOfReserveAfter = dummyERC20Token.balanceOf(reserveH);
-    depositedAfter = getDeposited(dummyERC20Token);
+    depositedAfter = deposited(dummyERC20Token);
 
     assert balanceOfUserBefore == balanceOfUserAfter;
     //assert balanceOfUserBefore + balanceOfReserveBefore == balanceOfUserAfter + balanceOfReserveAfter;
@@ -133,14 +136,14 @@ rule tokensNonInterference() {
     tokenBBalanceOfUserBefore = tokenB.balanceOf(user);
     tokenABalanceOfReserveBefore = tokenA.balanceOf(reserveH);
     tokenBBalanceOfReserveBefore = tokenB.balanceOf(reserveH);
-    tokenADepositedBefore = getDeposited(tokenA);
-    tokenBDepositedBefore = getDeposited(tokenB);
+    tokenADepositedBefore = deposited(tokenA);
+    tokenBDepositedBefore = deposited(tokenB);
 
     require tokenADepositedBefore == tokenABalanceOfReserveBefore;
     require tokenBDepositedBefore == tokenBBalanceOfReserveBefore;
     //require e.msg.sender != 0;
-    require reserveH.getPlugins(tokenA) == 0;
-    require reserveH.getPlugins(tokenB) == 0;
+    require reserveH.plugins(tokenA) == 0;
+    require reserveH.plugins(tokenB) == 0;
 
     //deposit(e, tokenA, user, amtDeposited);
     //f(e,args);
@@ -157,8 +160,8 @@ rule tokensNonInterference() {
     tokenBBalanceOfUserAfter = tokenB.balanceOf(user);
     tokenABalanceOfReserveAfter = tokenA.balanceOf(reserveH);
     tokenBBalanceOfReserveAfter = tokenB.balanceOf(reserveH);
-    tokenADepositedAfter = getDeposited(tokenA);
-    tokenBDepositedAfter = getDeposited(tokenB);
+    tokenADepositedAfter = deposited(tokenA);
+    tokenBDepositedAfter = deposited(tokenB);
 
     assert tokenBBalanceOfUserBefore == tokenBBalanceOfUserAfter;
     assert tokenBBalanceOfReserveBefore == tokenBBalanceOfReserveAfter;
