@@ -337,29 +337,6 @@ invariant amtPerSecMustNeverBeZero()
  *                      MISC                      *
  **************************************************/
 
-//  rules for info and checking the ghost and tool
-//  expecting to fail
-
-rule sanity(method f){
-
-    //uint32 cycleSecs = cycleSecs();
-    //require cycleSecs == 2;
-
-    //setupState();
-    env e;
-    calldataarg args;
-    f(e,args);
-    assert false;
-}
-
-
-rule sanitySimple(){
-    env e;
-    calldataarg args;
-    helperUpdateReceiverStates(e,args);
-    assert false;
-}
-
 
 rule asTimePassesReceivableDripsGrow(){
     env e; env e1; env e2;
@@ -407,39 +384,24 @@ rule asTimePassesReceivableDripsGrow(){
 rule cyclesAdditivity{
     env e1;
     env e2;
+    require e1.block.timestamp < e2.block.timestamp;
+    require e2.block.timestamp < 4294967295;
     address erc20;
-    uint32 maxCycles;
     uint256 userId;
-    uint256 assetId;
-    uint32 from1;
-    uint32 to1;
-    uint32 from2;
-    uint32 to2;
-
-    require to_mathint(maxCycles) == 2^32-1;
-    //require e2.block.timestamp > e1.block.timestamp;
+    uint32 maxCycles;
+    require maxCycles == max_uint32;
     storage init = lastStorage;
 
-    from1, to1 = _receivableDripsCyclesRange(e1, userId, assetId);
-    from2, to2 = _receivableDripsCyclesRange(e2, userId, assetId);
+    uint128 amt1;
+    amt1, _ = receiveDrips(e1, userId, erc20, maxCycles);
 
-    //require to1-from1 == 2;
-    //require to2-from2 == 3;
-    require e2.block.timestamp > e1.block.timestamp;
-    require e2.block.timestamp < 4294967295;
+    uint128 amt2;
+    amt2, _ = receiveDrips(e2, userId, erc20, maxCycles);
 
-    uint128 receivableAmt1; uint32 receivableCycles1;
-    receivableAmt1, receivableCycles1 = receiveDripsResult(e1, userId, erc20, maxCycles);
-        _receiveDrips(e1, userId, assetId, maxCycles);
-    uint128 receivableAmt2; uint32 receivableCycles2;
-    receivableAmt2, receivableCycles2 = receiveDripsResult(e2, userId, erc20, maxCycles);
+    uint128 amtTotal;
+    amtTotal, _ = receiveDrips(e2, userId, erc20, maxCycles) at init;
 
-    uint128 receivableAmt12; uint32 receivableCycles12;
-    receivableAmt12, receivableCycles12 = receiveDripsResult(e2, userId, erc20, maxCycles) at init;
-
-    assert receivableAmt12 == receivableAmt1 + receivableAmt2;
-
-    //assert false;
+    assert amtTotal == amt1 + amt2;
 }
 
 
@@ -689,26 +651,23 @@ rule integrityOfPast(method f)
 {
     require requireValidSlots();
 
-    env e0;                 address erc20;
-    calldataarg args;       uint256 dripperId;      uint256 receiverId;
-
-    require erc20 == 0x100;
-    require dripperId == 1;
-    require receiverId == 2;
+    env e0;
+    address erc20 = 0x100;
+    calldataarg args;
+    uint256 dripperId = 1;
+    uint256 receiverId = 2;
 
     // setup one dripper and one receiver with start dripping timestamp of now
-    uint32 dripId; uint160 amtPerSec;      uint32 start;           uint32 duration;
-
-    require dripId == 0;
-    require amtPerSec == 1;
-    require start == 5;
-    require duration == 100;
+    uint32 dripId = 0;
+    uint160 amtPerSec = 1;
+    uint32 start = 5;
+    uint32 duration = 100;
 
     DH.DripsConfig configBefore = helperCreateConfig(dripId, amtPerSec, start, duration);
 
     require e0.block.timestamp == start;
 
-    int128 balanceDelta;
+    // int128 balanceDelta;
 
     DH.DripsReceiver currReceiverBefore;
     require currReceiverBefore.userId == 0; // this will force passing empty currReceivers
@@ -763,7 +722,7 @@ rule integrityOfPast(method f)
     // validate that the past dripping stays, i.e. what was already dripped is still receivable
     assert ReceivableDripsBefore == ReceivableDripsAfter;
 
-    assert false; // sanity
+    // assert false; // sanity
 }
 
 

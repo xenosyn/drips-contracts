@@ -36,8 +36,7 @@ certoraRun  certora/harness/DripsHubHarness.sol \
 --optimistic_loop \
 --staging \
 --send_only \
-$RULE  \
---typecheck_only \
+$RULE \
 --msg "radicle -$RULE $MSG" #\
 #--debug
 
