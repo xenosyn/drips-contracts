@@ -2,7 +2,7 @@
 pragma solidity ^0.8.15;
 
 import {Drips, DripsConfig, DripsHistory, DripsConfigImpl, DripsReceiver,
-IReserve, Managed, Splits, SplitsReceiver, IERC20, DripsHub } from "../monger/DripsHub.sol";
+IReserve, Managed, Splits, SplitsReceiver, IERC20, DripsHub } from "../munger/DripsHub.sol";
 
 
 contract UpdateReceiverStatesHarness is DripsHub {

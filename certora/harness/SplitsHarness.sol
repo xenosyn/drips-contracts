@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.15;
 
-import {Splits, SplitsReceiver} from "../monger/DripsHub.sol";
+import {Splits, SplitsReceiver} from "../munger/DripsHub.sol";
 
 contract SplitsHarness is Splits {
 

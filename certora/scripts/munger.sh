@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e -o pipefail
 
-echo "Mongering $1"
-MONGER_DIR="certora/monger"
-mkdir -p "$MONGER_DIR"
+echo "Mungering $1"
+MUNGER_DIR="certora/munger"
+mkdir -p "$MUNGER_DIR"
 
 # Put all the sources into a single file
 forge flatten "src/$1" |
@@ -27,4 +27,4 @@ forge flatten "src/$1" |
 
     # Restore the original line breaks
     tr '\v' '\n' \
-    > "$MONGER_DIR/$1"
+    > "$MUNGER_DIR/$1"
